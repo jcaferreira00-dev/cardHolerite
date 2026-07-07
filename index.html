@@ -48,27 +48,32 @@
     <div class="sheet-body">
 
       <div class="section-title">💰 Salário</div>
+      <p class="section-note">📌 Campos lembrados de um mês para o outro — clique para editar quando precisar.</p>
       <div class="field">
-        <label>Salário base (R$)</label>
+        <label>Salário base (R$) 📌</label>
         <input type="number" id="salarioBase" step="0.01" placeholder="0,00">
       </div>
       <div class="grid2">
         <div class="field">
-          <label>Dias trabalhados</label>
+          <label>Dias trabalhados 📌</label>
           <input type="number" id="diasTrabalhados" step="1" placeholder="30">
         </div>
         <div class="field">
-          <label>Dependentes</label>
+          <label>Dependentes 📌</label>
           <input type="number" id="dependentes" step="1" placeholder="0">
         </div>
       </div>
       <div class="field">
-        <label>Domingos e feriados no mês</label>
+        <label>Domingos e feriados no mês 📌</label>
         <input type="number" id="domingosFeriados" step="1" placeholder="0">
       </div>
 
       <div class="section-title">⏱️ Horas extras (quantidade de horas)</div>
       <div class="grid2">
+        <div class="field">
+          <label>HE 50%</label>
+          <input type="number" id="he50" step="0.01" placeholder="0">
+        </div>
         <div class="field">
           <label>HE 70% diurna</label>
           <input type="number" id="he70Diurna" step="0.01" placeholder="0">
@@ -81,26 +86,26 @@
           <label>HE 100% diurna</label>
           <input type="number" id="he100Diurna" step="0.01" placeholder="0">
         </div>
+      </div>
+      <div class="grid2">
         <div class="field">
           <label>HE 100% noturna</label>
           <input type="number" id="he100Noturna" step="0.01" placeholder="0">
         </div>
-      </div>
-      <div class="grid2">
         <div class="field">
           <label>HE 100% feriado trabalhado</label>
           <input type="number" id="he100Feriado" step="0.01" placeholder="0">
         </div>
-        <div class="field">
-          <label>Horas adicional noturno</label>
-          <input type="number" id="horasAdNoturno" step="0.01" placeholder="0">
-        </div>
+      </div>
+      <div class="field">
+        <label>Horas adicional noturno</label>
+        <input type="number" id="horasAdNoturno" step="0.01" placeholder="0">
       </div>
 
       <div class="section-title">🩺 Benefícios / Descontos fixos (R$)</div>
       <div class="grid2">
         <div class="field">
-          <label>Assistência odonto</label>
+          <label>Assistência odonto 📌</label>
           <input type="number" id="odonto" step="0.01" placeholder="0,00">
         </div>
         <div class="field">
@@ -114,12 +119,12 @@
           <input type="number" id="despesasMedicas" step="0.01" placeholder="0,00">
         </div>
         <div class="field">
-          <label>Refeição</label>
+          <label>Refeição 📌</label>
           <input type="number" id="refeicao" step="0.01" placeholder="0,00">
         </div>
       </div>
       <div class="field">
-        <label>Vale alimentação (%)</label>
+        <label>Vale alimentação (%) 📌</label>
         <input type="number" id="valeAlimentacaoPct" step="0.01" placeholder="10">
       </div>
 
@@ -145,6 +150,18 @@
     <div class="sheet-footer">
       <button class="btn-secondary" id="clearForm">Limpar</button>
       <button class="btn-confirm" id="calcConfirm">Calcular</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMAÇÃO DE SAÍDA -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3>Sair sem calcular?</h3>
+    <p>Você tem dados preenchidos nesta tela que ainda não foram calculados. Se sair agora, eles serão perdidos.</p>
+    <div class="confirm-actions">
+      <button class="btn-secondary" id="confirmStay">Continuar editando</button>
+      <button class="btn-danger" id="confirmLeave">Sair mesmo assim</button>
     </div>
   </div>
 </div>

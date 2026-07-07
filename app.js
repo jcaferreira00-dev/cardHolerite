@@ -15,6 +15,19 @@ const UNIDADE_REF_KLABIN = 4736;     // Dados!E13 - base para Prev. Privada (PGB
 const PISO_SALARIAL      = 2020;     // Holerite!F24 - base para mensalidade sindical
 const CESTA_ALIMENTOS    = 550;      // Holerite!F25 - base para vale alimentação
 
+// Campos que são "lembrados" de um mês para o outro (persistidos no localStorage)
+const FIXED_FIELD_IDS = [
+  'salarioBase', 'diasTrabalhados', 'dependentes', 'domingosFeriados',
+  'odonto', 'refeicao', 'valeAlimentacaoPct'
+];
+const STORAGE_KEY = 'holerite_campos_fixos_v1';
+
+// Campos "de sessão": variam a cada cálculo e disparam a confirmação de saída
+const SESSION_FIELD_IDS = [
+  'he50', 'he70Diurna', 'he70Noturna', 'he100Diurna', 'he100Noturna',
+  'he100Feriado', 'horasAdNoturno', 'farmacia', 'despesasMedicas', 'sindicatoPct'
+];
+
 /* =========================================================
    FUNÇÕES AUXILIARES
    ========================================================= */
@@ -38,6 +51,32 @@ function calcINSS(baseProventos){
 }
 
 /* =========================================================
+   PERSISTÊNCIA DOS CAMPOS FIXOS
+   ========================================================= */
+function salvarCamposFixos(){
+  const dados = {};
+  FIXED_FIELD_IDS.forEach(id => {
+    dados[id] = document.getElementById(id).value;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
+}
+
+function carregarCamposFixos(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return;
+  try {
+    const dados = JSON.parse(raw);
+    FIXED_FIELD_IDS.forEach(id => {
+      if (dados[id] !== undefined && dados[id] !== '') {
+        document.getElementById(id).value = dados[id];
+      }
+    });
+  } catch (e) {
+    console.warn('Não foi possível carregar os campos fixos salvos.', e);
+  }
+}
+
+/* =========================================================
    CÁLCULO PRINCIPAL
    ========================================================= */
 function calcular(){
@@ -47,11 +86,12 @@ function calcular(){
   const dependentes         = num('dependentes');
   const domingosFeriados    = num('domingosFeriados');
 
-  const he70Diurna   = num('he70Diurna');
-  const he70Noturna  = num('he70Noturna');
-  const he100Diurna  = num('he100Diurna');
-  const he100Noturna = num('he100Noturna');
-  const he100Feriado = num('he100Feriado');
+  const he50         = num('he50');
+  const he70Diurna    = num('he70Diurna');
+  const he70Noturna   = num('he70Noturna');
+  const he100Diurna   = num('he100Diurna');
+  const he100Noturna  = num('he100Noturna');
+  const he100Feriado  = num('he100Feriado');
   const horasAdNoturno = num('horasAdNoturno');
 
   const odonto = num('odonto');
@@ -67,6 +107,7 @@ function calcular(){
 
   // ---- CÁLCULO DE PROVENTOS ----
   const salario   = salarioBase / 30 * diasTrabalhados;
+  const he50v     = (salarioBase / 180) * 1.5 * he50;
   const he70D     = (salarioBase / 180) * 1.7 * he70Diurna;
   const he70N     = (salarioBase / 180) * 1.7 * he70Noturna;
   const he100D    = (salarioBase / 180) * 2   * he100Diurna;
@@ -75,7 +116,7 @@ function calcular(){
 
   const diasNaoDSR = 30 - domingosFeriados;
   const reflexoHeDSR = diasNaoDSR > 0
-    ? (he70D + he70N + he100D + he100N + he100Fer) / diasNaoDSR * domingosFeriados
+    ? (he50v + he70D + he70N + he100D + he100N + he100Fer) / diasNaoDSR * domingosFeriados
     : 0;
 
   const adicionalNoturno40 = (salario / 180) * 0.4 * horasAdNoturno;
@@ -84,7 +125,7 @@ function calcular(){
     : 0;
   const adicionalNoturno40He = (he70N + he100N) * 0.4;
 
-  const totalProventos = salario + he70D + he70N + he100D + he100N + he100Fer
+  const totalProventos = salario + he50v + he70D + he70N + he100D + he100N + he100Fer
     + reflexoHeDSR + adicionalNoturno40 + reflexoAdNoturnoDSR + adicionalNoturno40He;
 
   // ---- CÁLCULO DE DESCONTOS ----
@@ -117,33 +158,64 @@ function calcular(){
 }
 
 /* =========================================================
-   EVENT LISTENERS
+   MODAL: abrir / fechar / confirmação de saída
    ========================================================= */
-
-// ---- Modal open/close ----
 const overlay = document.getElementById('overlay');
+const confirmOverlay = document.getElementById('confirmOverlay');
 
-document.getElementById('openModal').addEventListener('click', () => {
+function possuiDadosNaoCalculados(){
+  const algumCampoPreenchido = SESSION_FIELD_IDS.some(id => {
+    const v = document.getElementById(id).value;
+    return v !== undefined && v.trim() !== '';
+  });
+  const algumToggleAtivo = document.getElementById('ativarAdiantamento').checked
+    || document.getElementById('ativarPrevPrivada').checked
+    || document.getElementById('ativarSindicato').checked;
+  return algumCampoPreenchido || algumToggleAtivo;
+}
+
+function abrirModal(){
   overlay.classList.add('open');
-});
+}
 
-document.getElementById('closeModal').addEventListener('click', () => {
+function fecharModalDireto(){
   overlay.classList.remove('open');
-});
+  confirmOverlay.classList.remove('open');
+}
+
+function tentarFecharModal(){
+  if (possuiDadosNaoCalculados()) {
+    confirmOverlay.classList.add('open');
+  } else {
+    fecharModalDireto();
+  }
+}
+
+document.getElementById('openModal').addEventListener('click', abrirModal);
+document.getElementById('closeModal').addEventListener('click', tentarFecharModal);
 
 overlay.addEventListener('click', (e) => {
   if (e.target === overlay) {
-    overlay.classList.remove('open');
+    tentarFecharModal();
   }
 });
 
-// ---- Calcular e fechar modal ----
+document.getElementById('confirmStay').addEventListener('click', () => {
+  confirmOverlay.classList.remove('open');
+});
+
+document.getElementById('confirmLeave').addEventListener('click', () => {
+  fecharModalDireto();
+});
+
+// ---- Calcular: salva os campos fixos e fecha sem pedir confirmação ----
 document.getElementById('calcConfirm').addEventListener('click', () => {
   calcular();
+  salvarCamposFixos();
   overlay.classList.remove('open');
 });
 
-// ---- Limpar formulário ----
+// ---- Limpar formulário (mantém os campos fixos salvos intactos no storage) ----
 document.getElementById('clearForm').addEventListener('click', () => {
   document.querySelectorAll('.sheet-body input[type="number"]').forEach(i => i.value = '');
   document.querySelectorAll('.sheet-body input[type="checkbox"]').forEach(i => i.checked = false);
@@ -154,6 +226,11 @@ document.getElementById('clearForm').addEventListener('click', () => {
 // ---- Toggle mensalidade sindical ----
 document.getElementById('ativarSindicato').addEventListener('change', function(){
   document.getElementById('sindicatoPctWrap').style.display = this.checked ? 'block' : 'none';
+});
+
+// ---- Salva automaticamente os campos fixos sempre que forem editados ----
+FIXED_FIELD_IDS.forEach(id => {
+  document.getElementById(id).addEventListener('change', salvarCamposFixos);
 });
 
 // ---- Tema claro/escuro ----
@@ -167,4 +244,5 @@ themeBtn.addEventListener('click', () => {
 });
 
 // ---- Inicializar ----
+carregarCamposFixos();
 calcular();
