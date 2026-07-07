@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>Holerite</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body data-theme="light">
+<div class="app">
+
+  <div class="topbar">
+    <h1>Holerite</h1>
+    <button class="theme-btn" id="themeToggle" aria-label="Alternar tema">🌙</button>
+  </div>
+
+  <!-- CARD -->
+  <div class="card">
+    <div class="card-label">Salário líquido estimado</div>
+    <div class="card-liquido"><small>R$</small><span id="liquidoValor">0,00</span></div>
+    <div class="card-rows">
+      <div class="card-row">
+        <span><span class="dot prov"></span>Proventos</span>
+        <span class="card-row-value" id="proventosValor">R$ 0,00</span>
+      </div>
+      <div class="card-row">
+        <span><span class="dot desc"></span>Descontos</span>
+        <span class="card-row-value" id="descontosValor">R$ 0,00</span>
+      </div>
+      <div class="card-row">
+        <span>FGTS do mês</span>
+        <span class="card-row-value" id="fgtsValor">R$ 0,00</span>
+      </div>
+    </div>
+    <button class="btn-primary" id="openModal">✏️ Personalizar cálculo</button>
+  </div>
+
+  <p class="hint">Preencha os dados do mês para calcular. As tabelas de IRRF, INSS e demais parâmetros ficam fixos no código.</p>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="sheet-header">
+      <h2>Dados do holerite</h2>
+      <button class="sheet-close" id="closeModal">✕</button>
+    </div>
+    <div class="sheet-body">
+
+      <div class="section-title">💰 Salário</div>
+      <div class="field">
+        <label>Salário base (R$)</label>
+        <input type="number" id="salarioBase" step="0.01" placeholder="0,00">
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Dias trabalhados</label>
+          <input type="number" id="diasTrabalhados" step="1" placeholder="30">
+        </div>
+        <div class="field">
+          <label>Dependentes</label>
+          <input type="number" id="dependentes" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>Domingos e feriados no mês</label>
+        <input type="number" id="domingosFeriados" step="1" placeholder="0">
+      </div>
+
+      <div class="section-title">⏱️ Horas extras (quantidade de horas)</div>
+      <div class="grid2">
+        <div class="field">
+          <label>HE 70% diurna</label>
+          <input type="number" id="he70Diurna" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label>HE 70% noturna</label>
+          <input type="number" id="he70Noturna" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label>HE 100% diurna</label>
+          <input type="number" id="he100Diurna" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label>HE 100% noturna</label>
+          <input type="number" id="he100Noturna" step="0.01" placeholder="0">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>HE 100% feriado trabalhado</label>
+          <input type="number" id="he100Feriado" step="0.01" placeholder="0">
+        </div>
+        <div class="field">
+          <label>Horas adicional noturno</label>
+          <input type="number" id="horasAdNoturno" step="0.01" placeholder="0">
+        </div>
+      </div>
+
+      <div class="section-title">🩺 Benefícios / Descontos fixos (R$)</div>
+      <div class="grid2">
+        <div class="field">
+          <label>Assistência odonto</label>
+          <input type="number" id="odonto" step="0.01" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label>Convênio farmácia</label>
+          <input type="number" id="farmacia" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>Despesas médicas</label>
+          <input type="number" id="despesasMedicas" step="0.01" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label>Refeição</label>
+          <input type="number" id="refeicao" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="field">
+        <label>Vale alimentação (%)</label>
+        <input type="number" id="valeAlimentacaoPct" step="0.01" placeholder="10">
+      </div>
+
+      <div class="section-title">⚙️ Opções do mês</div>
+      <div class="toggle-row">
+        <span>Descontar adiantamento (40% do salário)</span>
+        <label class="switch"><input type="checkbox" id="ativarAdiantamento"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>Descontar previdência privada</span>
+        <label class="switch"><input type="checkbox" id="ativarPrevPrivada"><span class="slider"></span></label>
+      </div>
+      <div class="toggle-row">
+        <span>Descontar mensalidade sindical</span>
+        <label class="switch"><input type="checkbox" id="ativarSindicato"><span class="slider"></span></label>
+      </div>
+      <div class="field" id="sindicatoPctWrap" style="margin-top:10px; display:none;">
+        <label>Mensalidade sindical (%)</label>
+        <input type="number" id="sindicatoPct" step="0.01" placeholder="0">
+      </div>
+
+    </div>
+    <div class="sheet-footer">
+      <button class="btn-secondary" id="clearForm">Limpar</button>
+      <button class="btn-confirm" id="calcConfirm">Calcular</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
