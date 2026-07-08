@@ -11,23 +11,24 @@ const IRRF_TABLE = [
 ];
 
 const DEDUCAO_DEPENDENTE = 189.59;   // Dados!D9
-const UNIDADE_REF_KLABIN = 4736;     // Dados!E13 - base para Prev. Privada (PGBL)
+const UNIDADE_REF_KLABIN = 4736;     // Dados!E13 - base para "PACK Básico VGBL" (não é PGBL, confirmado no holerite real)
 const PISO_SALARIAL      = 2020;     // Holerite!F24 - base para mensalidade sindical
 const CESTA_ALIMENTOS    = 550;      // Holerite!F25 - base para vale alimentação
 
 // Campos que são "lembrados" de um mês para o outro (persistidos no localStorage)
 const FIXED_FIELD_IDS = [
   'salarioBase', 'diasTrabalhados', 'dependentes', 'domingosFeriados',
-  'odonto', 'refeicao', 'valeAlimentacaoPct'
+  'odonto', 'refeicao', 'valeAlimentacaoPct', 'sindicatoPct',
+  'decimoTerceiroParcela1', 'decimoTerceiroParcela2'
 ];
 // Toggles que também são lembrados (mesmo esquema, mas usam .checked em vez de .value)
-const FIXED_TOGGLE_IDS = ['ativarAdiantamento', 'ativarPrevPrivada'];
+const FIXED_TOGGLE_IDS = ['ativarAdiantamento', 'ativarPrevPrivada', 'ativarSindicato'];
 const STORAGE_KEY = 'holerite_campos_fixos_v1';
 
 // Campos "de sessão": variam a cada cálculo e disparam a confirmação de saída
 const SESSION_FIELD_IDS = [
   'he50', 'he70Diurna', 'he70Noturna', 'he100Diurna', 'he100Noturna',
-  'he100Feriado', 'horasAdNoturno', 'farmacia', 'despesasMedicas', 'sindicatoPct'
+  'he100Feriado', 'horasAdNoturno', 'farmacia', 'despesasMedicas'
 ];
 
 /* =========================================================
@@ -49,7 +50,7 @@ function calcINSS(baseProventos){
   if (baseProventos <= 2902.84)  return baseProventos * 0.09  - 24.32;
   if (baseProventos <= 4354.27)  return baseProventos * 0.12  - 111.40;
   if (baseProventos <= 8475.55)  return baseProventos * 0.14  - 198.49;
-  return 988.09; // teto INSS
+  return 988.07; // teto INSS — confirmado no holerite real de Junho/2026 (Contr. INSS Remuneração)
 }
 
 /* =========================================================
@@ -89,6 +90,8 @@ function carregarCamposFixos(){
 /* =========================================================
    CÁLCULO PRINCIPAL
    ========================================================= */
+let ultimoCalculo = null; // guarda os totais do último cálculo, pra permitir editar a Base IR sem reabrir o modal
+
 function calcular(){
   // ---- INPUTS DO USUÁRIO ----
   const salarioBase        = num('salarioBase');
@@ -138,33 +141,50 @@ function calcular(){
   const totalProventos = salario + he50v + he70D + he70N + he100D + he100N + he100Fer
     + reflexoHeDSR + adicionalNoturno40 + reflexoAdNoturnoDSR + adicionalNoturno40He;
 
-  // ---- CÁLCULO DE DESCONTOS ----
+  // ---- CÁLCULO DE DESCONTOS (exceto IRRF, que depende da Base IR editável) ----
   const inss = calcINSS(totalProventos);
 
+  // "PACK Básico VGBL" - é VGBL, não PGBL, então NÃO reduz a base do IR
+  // (confirmado no holerite real: base IR = proventos - INSS - dependentes, sem subtrair o VGBL)
   const prevPrivada = ativarPrevPrivada
     ? Math.max(0, (salarioBase - UNIDADE_REF_KLABIN) * 0.9 / 10)
     : 0;
-
-  const baseIRRF = totalProventos - (dependentes * DEDUCAO_DEPENDENTE) - inss - prevPrivada;
-  const faixa = IRRF_TABLE.find(f => baseIRRF >= f.min && baseIRRF <= f.max)
-    || IRRF_TABLE[IRRF_TABLE.length - 1];
-  const irrf = Math.max(0, baseIRRF * (faixa.pct / 100) - faixa.ded);
 
   const mensalidadeSindical = ativarSindicato ? PISO_SALARIAL * (sindicatoPct / 100) : 0;
   const adiantamento = ativarAdiantamento ? 0.4 * salarioBase : 0;
   const valeAlimentacao = CESTA_ALIMENTOS * (valeAlimentacaoPct / 100);
 
-  const totalDescontos = inss + irrf + prevPrivada + mensalidadeSindical + adiantamento
+  const outrosDescontosSemIRRF = inss + prevPrivada + mensalidadeSindical + adiantamento
     + odonto + farmacia + despesasMedicas + refeicao + valeAlimentacao;
 
-  const liquido = totalProventos - totalDescontos;
+  const baseIRAuto = Math.max(0, totalProventos - (dependentes * DEDUCAO_DEPENDENTE) - inss);
   const fgts = totalProventos * 0.08;
+
+  ultimoCalculo = { totalProventos, outrosDescontosSemIRRF, fgts, baseIRAuto };
+
+  // Preenche a Base IR com o valor recém-calculado (o usuário pode ajustar depois, se necessário)
+  document.getElementById('baseIRValor').value = baseIRAuto.toFixed(2);
+
+  aplicarBaseIR(baseIRAuto);
+  atualizarDecimoTerceiro();
+}
+
+// Recalcula IRRF/Descontos/Líquido a partir de uma Base IR (automática ou editada manualmente),
+// sem precisar refazer todo o cálculo de proventos.
+function aplicarBaseIR(baseIR){
+  if (!ultimoCalculo) return;
+  const faixa = IRRF_TABLE.find(f => baseIR >= f.min && baseIR <= f.max)
+    || IRRF_TABLE[IRRF_TABLE.length - 1];
+  const irrf = Math.max(0, baseIR * (faixa.pct / 100) - faixa.ded);
+
+  const totalDescontos = ultimoCalculo.outrosDescontosSemIRRF + irrf;
+  const liquido = ultimoCalculo.totalProventos - totalDescontos;
 
   // ---- RENDER NO CARD ----
   document.getElementById('liquidoValor').textContent = fmt(liquido);
-  document.getElementById('proventosValor').textContent = 'R$ ' + fmt(totalProventos);
+  document.getElementById('proventosValor').textContent = 'R$ ' + fmt(ultimoCalculo.totalProventos);
   document.getElementById('descontosValor').textContent = 'R$ ' + fmt(totalDescontos);
-  document.getElementById('fgtsValor').textContent = 'R$ ' + fmt(fgts);
+  document.getElementById('fgtsValor').textContent = 'R$ ' + fmt(ultimoCalculo.fgts);
 }
 
 /* =========================================================
@@ -174,14 +194,12 @@ const overlay = document.getElementById('overlay');
 const confirmOverlay = document.getElementById('confirmOverlay');
 
 function possuiDadosNaoCalculados(){
-  const algumCampoPreenchido = SESSION_FIELD_IDS.some(id => {
+  // Adiantamento, previdência e sindicato agora são campos "lembrados": chegam
+  // marcados sozinhos ao reabrir, então não contam como dado novo/não calculado.
+  return SESSION_FIELD_IDS.some(id => {
     const v = document.getElementById(id).value;
     return v !== undefined && v.trim() !== '';
   });
-  // Adiantamento e previdência agora são campos "lembrados": chegam marcados
-  // sozinhos ao reabrir, então não contam como dado novo/não calculado.
-  const algumToggleDeSessaoAtivo = document.getElementById('ativarSindicato').checked;
-  return algumCampoPreenchido || algumToggleDeSessaoAtivo;
 }
 
 function abrirModal(){
@@ -238,6 +256,25 @@ document.getElementById('ativarSindicato').addEventListener('change', function()
   document.getElementById('sindicatoPctWrap').style.display = this.checked ? 'block' : 'none';
 });
 
+// ---- Base IR editável (no card principal, fora do modal) ----
+document.getElementById('baseIRValor').addEventListener('input', function(){
+  const v = parseFloat(this.value);
+  aplicarBaseIR(isNaN(v) ? 0 : v);
+});
+document.getElementById('resetBaseIR').addEventListener('click', () => {
+  if (!ultimoCalculo) return;
+  document.getElementById('baseIRValor').value = ultimoCalculo.baseIRAuto.toFixed(2);
+  aplicarBaseIR(ultimoCalculo.baseIRAuto);
+});
+
+// ---- 13º salário (duas parcelas, não entra no líquido do mês) ----
+function atualizarDecimoTerceiro(){
+  const total = num('decimoTerceiroParcela1') + num('decimoTerceiroParcela2');
+  document.getElementById('decimoTerceiroTotal').textContent = 'R$ ' + fmt(total);
+}
+document.getElementById('decimoTerceiroParcela1').addEventListener('input', atualizarDecimoTerceiro);
+document.getElementById('decimoTerceiroParcela2').addEventListener('input', atualizarDecimoTerceiro);
+
 // ---- Salva automaticamente os campos fixos sempre que forem editados ----
 FIXED_FIELD_IDS.forEach(id => {
   document.getElementById(id).addEventListener('change', salvarCamposFixos);
@@ -258,4 +295,7 @@ themeBtn.addEventListener('click', () => {
 
 // ---- Inicializar ----
 carregarCamposFixos();
+// Sincroniza a visibilidade do campo de % do sindicato com o estado salvo
+document.getElementById('sindicatoPctWrap').style.display =
+  document.getElementById('ativarSindicato').checked ? 'block' : 'none';
 calcular();

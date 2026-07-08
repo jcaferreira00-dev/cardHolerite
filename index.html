@@ -31,11 +31,24 @@
         <span>FGTS do mês</span>
         <span class="card-row-value" id="fgtsValor">R$ 0,00</span>
       </div>
+      <div class="card-row card-row-editable">
+        <span>Base de cálculo do IR
+          <button type="button" class="reset-btn" id="resetBaseIR" title="Voltar ao valor calculado automaticamente">↺</button>
+        </span>
+        <span class="card-row-input">
+          <small>R$</small>
+          <input type="number" id="baseIRValor" step="0.01" inputmode="decimal">
+        </span>
+      </div>
+      <div class="card-row">
+        <span>13º do ano (2 parcelas)</span>
+        <span class="card-row-value" id="decimoTerceiroTotal">R$ 0,00</span>
+      </div>
     </div>
     <button class="btn-primary" id="openModal">✏️ Personalizar cálculo</button>
   </div>
 
-  <p class="hint">Preencha os dados do mês para calcular. As tabelas de IRRF, INSS e demais parâmetros ficam fixos no código.</p>
+  <p class="hint">Preencha os dados do mês para calcular. A Base de cálculo do IR vem preenchida automaticamente, mas pode ser editada no card acima em caso de divergência. As tabelas de IRRF, INSS e demais parâmetros ficam fixos no código.</p>
 </div>
 
 <!-- MODAL -->
@@ -129,22 +142,35 @@
       </div>
 
       <div class="section-title">⚙️ Opções do mês</div>
-      <p class="section-note">📌 Adiantamento e previdência mantêm o estado marcado de um mês para o outro.</p>
+      <p class="section-note">📌 Adiantamento, previdência e sindicato mantêm o estado marcado de um mês para o outro.</p>
       <div class="toggle-row">
         <span>Descontar adiantamento (40% do salário) 📌</span>
         <label class="switch"><input type="checkbox" id="ativarAdiantamento"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <span>Descontar previdência privada 📌</span>
+        <span>Descontar previdência privada (VGBL) 📌</span>
         <label class="switch"><input type="checkbox" id="ativarPrevPrivada"><span class="slider"></span></label>
       </div>
       <div class="toggle-row">
-        <span>Descontar mensalidade sindical</span>
+        <span>Descontar mensalidade sindical 📌</span>
         <label class="switch"><input type="checkbox" id="ativarSindicato"><span class="slider"></span></label>
       </div>
       <div class="field" id="sindicatoPctWrap" style="margin-top:10px; display:none;">
-        <label>Mensalidade sindical (%)</label>
+        <label>Mensalidade sindical (%) 📌</label>
         <input type="number" id="sindicatoPct" step="0.01" placeholder="0">
+      </div>
+
+      <div class="section-title">🎁 13º salário (ano)</div>
+      <p class="section-note">📌 Preencha com o valor líquido recebido em cada parcela. Não entra no líquido do mês — fica só como registro para o fechamento anual.</p>
+      <div class="grid2">
+        <div class="field">
+          <label>1ª parcela (20/nov) 📌</label>
+          <input type="number" id="decimoTerceiroParcela1" step="0.01" placeholder="0,00">
+        </div>
+        <div class="field">
+          <label>2ª parcela (15/dez) 📌</label>
+          <input type="number" id="decimoTerceiroParcela2" step="0.01" placeholder="0,00">
+        </div>
       </div>
 
     </div>
