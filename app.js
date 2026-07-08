@@ -20,6 +20,8 @@ const FIXED_FIELD_IDS = [
   'salarioBase', 'diasTrabalhados', 'dependentes', 'domingosFeriados',
   'odonto', 'refeicao', 'valeAlimentacaoPct'
 ];
+// Toggles que também são lembrados (mesmo esquema, mas usam .checked em vez de .value)
+const FIXED_TOGGLE_IDS = ['ativarAdiantamento', 'ativarPrevPrivada'];
 const STORAGE_KEY = 'holerite_campos_fixos_v1';
 
 // Campos "de sessão": variam a cada cálculo e disparam a confirmação de saída
@@ -44,10 +46,10 @@ function fmt(v){
 
 function calcINSS(baseProventos){
   if (baseProventos <= 1621)     return baseProventos * 0.075;
-  if (baseProventos <= 2902.84)  return baseProventos * 0.09  - 16.5;
-  if (baseProventos <= 4354.27)  return baseProventos * 0.12  - 82.604;
-  if (baseProventos <= 8475.55)  return baseProventos * 0.14  - 148.708;
-  return 988.07; // teto INSS
+  if (baseProventos <= 2902.84)  return baseProventos * 0.09  - 24.32;
+  if (baseProventos <= 4354.27)  return baseProventos * 0.12  - 111.40;
+  if (baseProventos <= 8475.55)  return baseProventos * 0.14  - 198.49;
+  return 988.09; // teto INSS
 }
 
 /* =========================================================
@@ -57,6 +59,9 @@ function salvarCamposFixos(){
   const dados = {};
   FIXED_FIELD_IDS.forEach(id => {
     dados[id] = document.getElementById(id).value;
+  });
+  FIXED_TOGGLE_IDS.forEach(id => {
+    dados[id] = document.getElementById(id).checked;
   });
   localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
 }
@@ -69,6 +74,11 @@ function carregarCamposFixos(){
     FIXED_FIELD_IDS.forEach(id => {
       if (dados[id] !== undefined && dados[id] !== '') {
         document.getElementById(id).value = dados[id];
+      }
+    });
+    FIXED_TOGGLE_IDS.forEach(id => {
+      if (dados[id] !== undefined) {
+        document.getElementById(id).checked = dados[id];
       }
     });
   } catch (e) {
@@ -168,10 +178,10 @@ function possuiDadosNaoCalculados(){
     const v = document.getElementById(id).value;
     return v !== undefined && v.trim() !== '';
   });
-  const algumToggleAtivo = document.getElementById('ativarAdiantamento').checked
-    || document.getElementById('ativarPrevPrivada').checked
-    || document.getElementById('ativarSindicato').checked;
-  return algumCampoPreenchido || algumToggleAtivo;
+  // Adiantamento e previdência agora são campos "lembrados": chegam marcados
+  // sozinhos ao reabrir, então não contam como dado novo/não calculado.
+  const algumToggleDeSessaoAtivo = document.getElementById('ativarSindicato').checked;
+  return algumCampoPreenchido || algumToggleDeSessaoAtivo;
 }
 
 function abrirModal(){
@@ -230,6 +240,9 @@ document.getElementById('ativarSindicato').addEventListener('change', function()
 
 // ---- Salva automaticamente os campos fixos sempre que forem editados ----
 FIXED_FIELD_IDS.forEach(id => {
+  document.getElementById(id).addEventListener('change', salvarCamposFixos);
+});
+FIXED_TOGGLE_IDS.forEach(id => {
   document.getElementById(id).addEventListener('change', salvarCamposFixos);
 });
 
